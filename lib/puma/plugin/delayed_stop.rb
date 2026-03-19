@@ -12,7 +12,8 @@
 Puma::Plugin.create do
   # Signals Puma registers handlers for. It overwrites plugin handlers for these
   # after plugins start, so using one here would silently break the delayed stop.
-  PUMA_SIGNALS = %w[TERM INT USR1 USR2 HUP].freeze
+  # INFO (BSD/macOS) and PWR (Linux) were added in Puma 7.
+  PUMA_SIGNALS = %w[TERM INT USR1 USR2 HUP INFO PWR].freeze
 
   # POSIX signal that triggers a delayed stop.
   # Defaults to QUIT so as not to interfere with Puma's default signal handling.

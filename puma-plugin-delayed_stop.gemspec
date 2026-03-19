@@ -27,7 +27,7 @@ Gem::Specification.new do |spec|
   spec.files = Dir["lib/**/*.rb", "LICENSE", "README.md", "CHANGELOG.md"]
   spec.require_paths = ["lib"]
 
-  spec.add_dependency "puma", ">= 5.0", "< 7"
+  spec.add_dependency "puma", ">= 5.0", "< 8"
 
   spec.add_development_dependency "bundler", ">= 2.0"
   spec.add_development_dependency "rake", "~> 13.0"
