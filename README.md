@@ -10,7 +10,7 @@ When Puma receives `SIGTERM`, it begins shutting down immediately. In orchestrat
 
 This plugin intercepts a configurable signal (default: `SIGQUIT`) and waits a configurable number of seconds before telling Puma to stop. This gives the orchestrator time to update its routing tables.
 
-A typical Kubernetes setup would configure the pod's `preStop` hook or `terminationGracePeriodSeconds` to send `SIGQUIT`, then later `SIGTERM`:
+A typical Kubernetes setup would configure the pod's `preStop` hook to send `SIGQUIT` before the kubelet sends `SIGTERM`:
 
 ```yaml
 lifecycle:
@@ -18,6 +18,20 @@ lifecycle:
     exec:
       command: ["kill", "-QUIT", "1"]
 ```
+
+In Docker Swarm, configure `stop_signal` to send `SIGQUIT` first and set `stop_grace_period` long enough to cover both the drain and Puma's graceful shutdown:
+
+```yaml
+services:
+  web:
+    image: myapp:latest
+    stop_signal: SIGQUIT
+    stop_grace_period: 30s
+    environment:
+      PUMA_DELAYED_STOP_DRAIN_SECONDS: "5"
+```
+
+Swarm sends `stop_signal` when removing a task, then waits up to `stop_grace_period` before sending `SIGKILL`. The plugin sleeps through the drain period while Swarm updates its routing mesh, then tells Puma to shut down gracefully with the remaining time.
 
 ## Installation
 
