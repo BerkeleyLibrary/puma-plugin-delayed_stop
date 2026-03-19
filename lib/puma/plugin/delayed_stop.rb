@@ -30,9 +30,12 @@ Puma::Plugin.create do
         "reserve (e.g. QUIT). Puma reserves: #{PUMA_SIGNALS.map { |s| "SIG#{s}" }.join(', ')}"
     end
 
+    # Puma 6 renamed `events` to `log_writer` for logging.
+    logger = launcher.respond_to?(:log_writer) ? launcher.log_writer : launcher.events
+
     Signal.trap(STOP_SIGNAL) do
       Thread.new do
-        launcher.log_writer.log("[delayed_stop] Received SIG#{STOP_SIGNAL}, sleeping #{DRAIN_SECONDS}s before stopping")
+        logger.log("[delayed_stop] Received SIG#{STOP_SIGNAL}, sleeping #{DRAIN_SECONDS}s before stopping")
         sleep(DRAIN_SECONDS)
         launcher.stop
       end

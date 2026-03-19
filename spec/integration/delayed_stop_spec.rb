@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "tempfile"
+
 RSpec.describe "Delayed stop integration", :integration do
   RACKUP = File.expand_path("../fixtures/config.ru", __dir__)
 
@@ -32,16 +34,28 @@ RSpec.describe "Delayed stop integration", :integration do
     end
   end
 
+  # Generate a Puma config file that loads the plugin via the DSL,
+  # which works in both Puma 5 and 6.
+  def write_puma_config(port:)
+    file = Tempfile.new(["puma", ".rb"])
+    file.write(<<~RUBY)
+      app_dir = "#{File.expand_path('..', __dir__)}"
+      rackup "\#{app_dir}/fixtures/config.ru"
+      bind "tcp://127.0.0.1:#{port}"
+      workers 0
+      threads 1, 1
+      plugin :delayed_stop
+    RUBY
+    file.close
+    file
+  end
+
   def spawn_puma(port:, env_overrides: {})
     env = ENV.to_h.merge(env_overrides)
-    cmd = [
-      "bundle", "exec", "puma",
-      "--bind", "tcp://127.0.0.1:#{port}",
-      "--workers", "0",
-      "--threads", "1:1",
-      "--plugin", "delayed_stop",
-      RACKUP
-    ]
+    config_file = write_puma_config(port: port)
+    @tempfiles << config_file
+
+    cmd = ["bundle", "exec", "puma", "-C", config_file.path]
 
     stdout_r, stdout_w = IO.pipe
     stderr_r, stderr_w = IO.pipe
@@ -51,6 +65,15 @@ RSpec.describe "Delayed stop integration", :integration do
 
     wait_for_server(port)
     { pid: pid, stdout: stdout_r, stderr: stderr_r }
+  end
+
+  def spawn_puma_capture(port:, env_overrides: {})
+    env = ENV.to_h.merge(env_overrides)
+    config_file = write_puma_config(port: port)
+    @tempfiles << config_file
+
+    cmd = ["bundle", "exec", "puma", "-C", config_file.path]
+    Open3.capture3(env, *cmd)
   end
 
   def cleanup(handle)
@@ -77,7 +100,12 @@ RSpec.describe "Delayed stop integration", :integration do
     handle[:pid] = nil
   end
 
-  after { cleanup(@handle) }
+  before { @tempfiles = [] }
+
+  after do
+    cleanup(@handle)
+    @tempfiles.each(&:unlink)
+  end
 
   context "when SIGQUIT is received" do
     it "keeps the server running during the drain period, then shuts down" do
@@ -156,20 +184,14 @@ RSpec.describe "Delayed stop integration", :integration do
     %w[TERM SIGTERM].each do |signal_value|
       it "exits with an error when PUMA_DELAYED_STOP_SIGNAL=#{signal_value}" do
         port = find_open_port
-        env = ENV.to_h.merge(
-          "PUMA_DELAYED_STOP_SIGNAL" => signal_value,
-          "PUMA_DELAYED_STOP_DRAIN_SECONDS" => "1"
-        )
-        cmd = [
-          "bundle", "exec", "puma",
-          "--bind", "tcp://127.0.0.1:#{port}",
-          "--workers", "0",
-          "--threads", "1:1",
-          "--plugin", "delayed_stop",
-          RACKUP
-        ]
 
-        stdout, stderr, status = Open3.capture3(env, *cmd)
+        stdout, stderr, status = spawn_puma_capture(
+          port: port,
+          env_overrides: {
+            "PUMA_DELAYED_STOP_SIGNAL" => signal_value,
+            "PUMA_DELAYED_STOP_DRAIN_SECONDS" => "1"
+          }
+        )
         output = stdout + stderr
 
         expect(status.success?).to be false
