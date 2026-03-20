@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1 (2026/03/20)
+
+- Fix `uninitialized constant Puma::Plugin` error when Bundler auto-requires the gem before Puma is loaded
+
 ## 0.1.0 (2026/03/19)
 
 - Initial release
