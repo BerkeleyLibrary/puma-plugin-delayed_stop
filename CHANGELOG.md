@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2 (2026/03/20)
+
+- Fix release workflow failing to create GitHub Release
+
 ## 0.1.1 (2026/03/20)
 
 - Fix `uninitialized constant Puma::Plugin` error when Bundler auto-requires the gem before Puma is loaded
