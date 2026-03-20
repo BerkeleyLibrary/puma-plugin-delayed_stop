@@ -9,7 +9,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       id-token: write
 
     steps:
@@ -21,13 +21,12 @@ jobs:
           ruby-version: "3.3"
           bundler-cache: true
 
-      - name: Build gem
-        run: gem build puma-plugin-delayed_stop.gemspec
-
       - name: Publish to RubyGems
         uses: rubygems/release-gem@v1
 
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${{ github.ref_name }}" *.gem --generate-notes
+        run: |
+          gem build puma-plugin-delayed_stop.gemspec
+          gh release create "${{ github.ref_name }}" *.gem --generate-notes
