@@ -1,4 +1,4 @@
-name: Release
+name: Publish Ruby Gem
 
 on:
   push:
@@ -9,7 +9,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       id-token: write
 
     steps:
