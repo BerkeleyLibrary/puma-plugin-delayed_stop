@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 (Unreleased)
+## 0.1.0 (2026/03/19)
 
 - Initial release
 - Supports Puma 5, 6, and 7
